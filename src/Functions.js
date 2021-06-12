@@ -9,14 +9,16 @@ export const  calculateInterest = (winprobability, highMargin, mildMargin) => {
       highInterest: false,
     };
     if (winprobability) {
+        
       const winProbLength = winprobability.length;
       const percentageOfGame = Math.round(winProbLength / 10);
       const endGame = winprobability.slice(
         winProbLength - percentageOfGame,
         winProbLength
       );
-  
+      console.log(endGame)  
       endGame.forEach((play) => {
+          console.log(0.5-play.homeWinPercentage)
         const close = play.homeWinPercentage;
         if (close > 0.5 - highMargin && close < 0.5 + highMargin) {
           interest.highInterest = true;
@@ -26,6 +28,8 @@ export const  calculateInterest = (winprobability, highMargin, mildMargin) => {
           interest.noInterest = true;
         }
       });
+    }else{
+        console.log("unable to find win probability")
     }
     return interest;
   };

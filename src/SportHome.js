@@ -6,7 +6,7 @@ import {
   MuiPickersUtilsProvider,
 } from "@material-ui/pickers";
 import moment from "moment";
-import { Grid, Paper } from "@material-ui/core";
+import { Grid, Paper, Switch } from "@material-ui/core";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import ArrowForwardIosIcon from "@material-ui/icons/ArrowForwardIos";
 import Slider from "@material-ui/core/Slider";
@@ -25,6 +25,8 @@ import {
   getSportFromParam,
 } from "./Functions";
 import { SPORTS_ENUM } from "./Sports";
+
+import { LineChart, Line } from 'recharts';
 
 const useStyles = makeStyles((theme) => ({
   formControl: {
@@ -46,6 +48,7 @@ function SportHome() {
   const [cancelToken, setCancelToken] = useState(axios.CancelToken.source());
   const [selectedDate, handleDateChange] = useState();
   const [events, setEvents] = useState({});
+  const [displayAllScores,setDisplayAllScores] = useState(false)
   const [displayScores, setDisplayScores] = useState([]);
   const [interestMargin, setInterestMargin] = useState({
     defaultHigh: 0.1,
@@ -130,23 +133,16 @@ function SportHome() {
               value={activeSport.name}
               renderValue={() => activeSport.name}
               onChange={(event) => {
-                console.log(event.target.value);
-                // setActiveSport(event.target.value);
                 setActiveSport(SPORTS_ENUM[event.target.value]);
               }}
             >
-              {/* TODO make this dynamic */}
-              {/* {Object.keys(SPORTS_ENUM).map((v)=>{
-            console.log(v);PORTS_ENUM.nba
-            return <MenuItem value={v.id}>huh{v.name}</MenuItem>
-          })}
-           */}
-              <MenuItem value={SPORTS_ENUM.nba.id}>
-                {SPORTS_ENUM.nba.id}
-              </MenuItem>
-              <MenuItem value={SPORTS_ENUM.nfl.id}>
-                {SPORTS_ENUM.nfl.id}
-              </MenuItem>
+              {Object.keys(SPORTS_ENUM).map((sportID) => {
+                return (
+                  <MenuItem value={SPORTS_ENUM[sportID].id} key={SPORTS_ENUM[sportID].id}>
+                    {SPORTS_ENUM[sportID].id}
+                  </MenuItem>
+                );
+              })}
             </Select>
           </FormControl>
         </Grid>
@@ -190,6 +186,14 @@ function SportHome() {
             setInterestMargin={setInterestMargin}
           />
         </Grid>
+        <Grid item xs={12} lg={4}>
+        <Switch
+        checked={displayAllScores}
+        onChange={(event)=>{setDisplayAllScores(event.target.checked)}}
+        name="checkedA"
+        inputProps={{ 'aria-label': 'secondary checkbox' }}
+      />
+        </Grid>
       </Grid>
 
       {loadingEvents ? (
@@ -207,18 +211,24 @@ function SportHome() {
             displayScores={displayScores}
             setDisplayScores={setDisplayScores}
             activeSport={activeSport}
+            displayAllScores={displayAllScores}
           />
         </Grid>
       )}
+     
     </Grid>
   );
 }
 
 const DisplayInterestSlider = ({ date, interestMargin, setInterestMargin }) => {
+  const max = 0.5;
+  const min=0.001;
+  
+  
   return (
     <div style={{ paddingRight: "50px" }}>
       <Typography id="continuous-slider" gutterBottom>
-        Volume
+        Interest Level
       </Typography>{" "}
       <Slider
         defaultValue={interestMargin.defaultHigh}
@@ -241,6 +251,7 @@ const DisplayEvents = ({
   setDisplayScores,
 
   activeSport,
+  displayAllScores
 }) => {
   return (
     <Grid container item xs={12}>
@@ -253,6 +264,7 @@ const DisplayEvents = ({
                   displayScores={displayScores}
                   setDisplayScores={setDisplayScores}
                   activeSport={activeSport}
+                  displayAllScores={displayAllScores}
                 />
               </Grid>
             );
@@ -267,14 +279,15 @@ const DisplayEvent = ({
   displayScores,
   setDisplayScores,
   activeSport,
+  displayAllScores
 }) => {
-  const now = new Date();
+  console.log("event: ",event)
   return (
     <Paper elevation={3} style={{ padding: "10px", margin: "10px" }}>
       <h3>{event.name}</h3>
       <p>
         {event.status.type.description} - {event.status.type.detail} as of{" "}
-        {moment(now).format("h:mmA")}
+        {moment(new Date()).format("h:mmA")}
       </p>
       {event.status.type.name !== "STATUS_SCHEDULED" && (
         <DisplayEventScores
@@ -283,8 +296,13 @@ const DisplayEvent = ({
           displayScores={displayScores}
           setDisplayScores={setDisplayScores}
           activeSport={activeSport}
+          displayAllScores={displayAllScores}
         />
       )}
+
+   
+
+    
     </Paper>
   );
 };
@@ -295,7 +313,34 @@ const DisplayEventScores = ({
   displayScores,
   setDisplayScores,
   activeSport,
+  displayAllScores
 }) => {
+  const [graphVal,setGraphVal] = useState([])
+  const [graphValA,setGraphValA] = useState([])
+  if(data){
+  console.log("data",data)
+  const homeWinPercentage = data.winprobability.map((item)=>{return {uv:item.homeWinPercentage}})
+  console.log(homeWinPercentage)
+  
+  }
+  console.log(graphVal)
+  const graphData = [
+    {
+      name: 'Page A',
+      uv: 0,
+
+    },
+    {
+      name: 'Page B',
+      uv: 2,
+     
+    },
+    {
+      name: 'Page C',
+      uv: 0,
+      
+    }
+  ];
   return data ? (
     <Grid>
       <Grid item xs={6}>
@@ -308,7 +353,7 @@ const DisplayEventScores = ({
         </p>
       </Grid>
       <Grid item xs={6}>
-        {!displayScores.includes(id) ? (
+        {(!displayScores.includes(id) && !displayAllScores)? (
           <button
             onClick={() => {
               setDisplayScores((prev) => [...prev, id]);
@@ -321,11 +366,24 @@ const DisplayEventScores = ({
           " - " +
           getScore(data, activeSport).homeScore
         )}
+        <p>{graphVal.length>0 && graphVal[1]}</p>
+
+        <p>{graphValA.length>0 && graphValA[1]}</p>
+        <LineChart width={400} height={400} data={data.winprobability.map((item)=>{return {team:item.homeWinPercentage,zero:0.5}})}>
+    <Line type="monotone" dataKey="team" stroke="#8884d8" />
+    <Line type="monotone" dataKey="zero" stroke="#8884d8" />
+  </LineChart>
+        {/* {data && <LineGraph fillBelow={'rgba(200,67,23,0.1)'}
+  hover={true} gridX={true} data={[]} gridY={true} onHover={(v)=>{setGraphVal(v)}} accent={'palevioletred'}  data={data.winprobability.map(item=>0.5-item.homeWinPercentage)}/>}
+        {data && <LineGraph fillBelow={'rgba(200,67,23,0.1)'}
+  hover={true} gridX={true} gridY={true} onHover={(v)=>{setGraphValA(v)}} accent={'palevioletred'} data={data.winprobability.map(item=>item.homeWinPercentage)}/>} */}
       </Grid>
     </Grid>
   ) : (
     "loading"
   );
 };
+
+
 
 export default SportHome;
