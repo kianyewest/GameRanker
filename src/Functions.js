@@ -73,7 +73,7 @@ export const  calculateInterest = (winprobability, highMargin, mildMargin) => {
   export  const getEvents = (formattedDate,SPORT_ESPN_LINK,newCancelToken,interestMargin,setLoadingEvents,setEvents)=>{
     axios
         .get(
-          `http://site.api.espn.com/apis/site/v2/sports/${SPORT_ESPN_LINK}/scoreboard?dates=${formattedDate}`,
+          `https://site.api.espn.com/apis/site/v2/sports/${SPORT_ESPN_LINK}/scoreboard?dates=${formattedDate}`,
           { cancelToken: newCancelToken.token }
         )
         .catch(function (thrown) {
