@@ -11,27 +11,13 @@ import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import ArrowForwardIosIcon from "@material-ui/icons/ArrowForwardIos";
 import Slider from "@material-ui/core/Slider";
 import MenuItem from "@material-ui/core/MenuItem";
-import FormHelperText from "@material-ui/core/FormHelperText";
 import FormControl from "@material-ui/core/FormControl";
 import Select from "@material-ui/core/Select";
 import InputLabel from "@material-ui/core/InputLabel";
 
 import { makeStyles } from "@material-ui/core/styles";
-
-const nba = Object.freeze({
-  id: "nba",
-  link: "basketball/nba",
-  scoresID: "plays",
-  name: "nba",
-});
-const nfl = Object.freeze({
-  id: "nfl",
-  link: "football/nfl",
-  scoresID: "scoringPlays",
-  name: "nfl",
-});
-
-const SPORTS_ENUM = Object.freeze({ [nba.id]: nba, [nfl.id]: nfl });
+import {calculateInterest,getScore,getEvents,getDateFromParam,getSportFromParam} from "./Functions"
+import {SPORTS_ENUM} from "./Sports"
 
 const useStyles = makeStyles((theme) => ({
   formControl: {
@@ -41,41 +27,14 @@ const useStyles = makeStyles((theme) => ({
   selectEmpty: {
     marginTop: theme.spacing(2),
   },
+  header:{
+    padding:"10px",
+    // backgroundColor:"lightblue",
+    minHeight:"100vh"
+  }
 }));
 
-const calculateInterest = (winprobability, highMargin, mildMargin) => {
-  const interest = {
-    noInterest: false,
-    mildInterest: false,
-    highInterest: false,
-  };
-  if (winprobability) {
-    const winProbLength = winprobability.length;
-    const percentageOfGame = Math.round(winProbLength / 10);
-    const endGame = winprobability.slice(
-      winProbLength - percentageOfGame,
-      winProbLength
-    );
 
-    endGame.forEach((play) => {
-      const close = play.homeWinPercentage;
-      if (close > 0.5 - highMargin && close < 0.5 + highMargin) {
-        interest.highInterest = true;
-      } else if (close > 0.5 - mildMargin && close < 0.5 + mildMargin) {
-        interest.mildInterest = true;
-      } else {
-        interest.noInterest = true;
-      }
-    });
-  }
-  return interest;
-};
-
-const getScore = (eventData, sport) => {
-  const playArray = eventData[sport.scoresID];
-  const recentPlay = playArray[playArray.length - 1];
-  return recentPlay;
-};
 
 function SportHome() {
   const classes = useStyles();
@@ -96,30 +55,10 @@ function SportHome() {
     console.log("params: ", queryString);
     const urlParams = new URLSearchParams(queryString);
 
-    const dateStr = urlParams.get("date");
-    if (dateStr) {
-      console.log("got date string: ", dateStr);
-      const date = moment(dateStr, "DDMMYYYY").toDate();
-      if (!isNaN(date.getTime())) {
-        handleDateChange(date);
-      } else {
-        handleDateChange(new Date());
-      }
-    } else {
-      handleDateChange(new Date());
-    }
+    getDateFromParam(urlParams,handleDateChange)
+    getSportFromParam(urlParams,setActiveSport)
 
-    const sportStr = urlParams.get("sport");
-    if (sportStr) {
-      const sport = SPORTS_ENUM[sportStr];
-      if (sport) {
-        setActiveSport(sport);
-      } else {
-        setActiveSport(SPORTS_ENUM.nba);
-      }
-    } else {
-      setActiveSport(SPORTS_ENUM.nba);
-    }
+    
   }, []);
 
   useEffect(() => {
@@ -139,63 +78,8 @@ function SportHome() {
     cancelToken.cancel("user requested events for " + formattedDate);
     const newCancelToken = axios.CancelToken.source();
     setCancelToken(newCancelToken);
-    axios
-      .get(
-        `http://site.api.espn.com/apis/site/v2/sports/${SPORT_ESPN_LINK}/scoreboard?dates=${formattedDate}`,
-        { cancelToken: newCancelToken.token }
-      )
-      .catch(function (thrown) {
-        if (axios.isCancel(thrown)) {
-          console.log("Request canceled:    ->", thrown.message);
-        } else {
-          console.error(thrown.message);
-        }
-      })
-      .then(function (response) {
-        if (!response) {
-          return;
-        }
-        setLoadingEvents(false);
-
-        const localEvents = {};
-        response.data.events.forEach(
-          (event) => (localEvents[event.id] = event)
-        );
-
-        setEvents(localEvents);
-
-        response.data.events.forEach((event) => {
-          axios
-            .get(
-              `https://site.api.espn.com/apis/site/v2/sports/${SPORT_ESPN_LINK}/summary?event=${event.id}`,
-              { cancelToken: newCancelToken.token }
-            )
-            .catch(function (thrown) {
-              if (axios.isCancel(thrown)) {
-                console.log("Request canceled inner: ", thrown.message);
-              } else {
-                console.error(thrown.message);
-              }
-            })
-            .then((res) => {
-              if (!res) {
-                return;
-              }
-              res.data["interest"] = calculateInterest(
-                res.data.winprobability,
-                interestMargin.high,
-                interestMargin.mild
-              );
-
-              const localEvent = localEvents[event.id];
-              localEvent["data"] = res.data;
-              setEvents((prevEvents) => ({
-                ...prevEvents,
-                [event.id]: localEvent,
-              }));
-            });
-        });
-      });
+    
+    getEvents(formattedDate,SPORT_ESPN_LINK,newCancelToken,interestMargin,setLoadingEvents,setEvents)
   }, [selectedDate, activeSport]);
 
   useEffect(() => {
@@ -217,10 +101,12 @@ function SportHome() {
       container
       spacing={0}
       direction="column"
-      alignItems="center"
-      style={{ minHeight: "100vh" }}
+      justify="flex-start"
+      alignItems="flex-start"
+      className={classes.header}
     >
-      <Grid item xs={12}>
+      <Grid container xs={12}  direction="row">
+      <Grid item xs={4}>
         <FormControl className={classes.formControl}>
           <InputLabel id="demo-simple-select-label">Sport</InputLabel>
           <Select
@@ -238,12 +124,12 @@ function SportHome() {
             return <MenuItem value={v.id}>huh{v.name}</MenuItem>
           })}
            */}
-            <MenuItem value={nba}>{nba.name}</MenuItem>
-            <MenuItem value={nfl}>{nfl.name}</MenuItem>
+            <MenuItem value={SPORTS_ENUM.nba}>{SPORTS_ENUM.nba.name}</MenuItem>
+            <MenuItem value={SPORTS_ENUM.nfl}>{SPORTS_ENUM.nfl.name}</MenuItem>
           </Select>
         </FormControl>
       </Grid>
-      <Grid item xs={12}>
+      <Grid item xs={4}>
         <button
           onClick={() =>
             handleDateChange(moment(selectedDate).subtract(1, "day").toDate())
@@ -274,33 +160,43 @@ function SportHome() {
           <ArrowForwardIosIcon />
         </button>
       </Grid>
+      <Grid item xs={4}>
+        <DisplayInterestSlider
+          interestMargin={interestMargin}
+          setInterestMargin={setInterestMargin}
+        />
+      </Grid>
+      </Grid>
+      
       {loadingEvents ? (
         "Loading.."
       ) : (
-        <Grid item xs={12}>
-          {selectedDate && !isNaN(selectedDate.getTime()) && 
-            <DisplayDate
-              date={selectedDate}
-              interestMargin={interestMargin}
-              setInterestMargin={setInterestMargin}
+        <Grid container item xs={12}>
+          {selectedDate && !isNaN(selectedDate.getTime()) && (
+            
+              
+                <h2>
+                  Results for: {moment(selectedDate).format("DD/MM/YYYY")} (NZ
+                  time)
+                </h2>
+          )}
+          
+            <DisplayEvents
+              events={events}
+              displayScores={displayScores}
+              setDisplayScores={setDisplayScores}
+              activeSport={activeSport}
             />
-          }
-          <DisplayEvents
-            events={events}
-            displayScores={displayScores}
-            setDisplayScores={setDisplayScores}
-            activeSport={activeSport}
-          />
+          
         </Grid>
       )}
     </Grid>
   );
 }
 
-const DisplayDate = ({ date, interestMargin, setInterestMargin }) => {
+const DisplayInterestSlider = ({ date, interestMargin, setInterestMargin }) => {
   return (
     <div>
-      {<p>Results for: {moment(date).format("DD/MM/YYYY")} (NZ time)</p>}
       Set interest range (lower number means closer game)
       <Slider
         defaultValue={interestMargin.defaultHigh}
@@ -325,21 +221,23 @@ const DisplayEvents = ({
   activeSport,
 }) => {
   return (
-    <div>
+    <Grid container item xs={12}>
       {Object.keys(events).length > 0
         ? Object.keys(events).map((key) => {
             return (
-              <DisplayEvent
-                key={events[key].id}
-                event={events[key]}
-                displayScores={displayScores}
-                setDisplayScores={setDisplayScores}
-                activeSport={activeSport}
-              />
+              <Grid item xs={4}>
+                <DisplayEvent
+                  key={events[key].id}
+                  event={events[key]}
+                  displayScores={displayScores}
+                  setDisplayScores={setDisplayScores}
+                  activeSport={activeSport}
+                />
+              </Grid>
             );
           })
         : "No events"}
-    </div>
+    </Grid>
   );
 };
 
@@ -352,7 +250,7 @@ const DisplayEvent = ({
   const now = new Date();
   return (
     <Paper elevation={3} style={{ padding: "10px", margin: "10px" }}>
-      <h1>{event.name}</h1>
+      <h3>{event.name}</h3>
       <p>
         {event.status.type.description} - {event.status.type.detail} as of{" "}
         {moment(now).format("h:mmA")}
