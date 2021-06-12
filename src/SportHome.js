@@ -10,6 +10,7 @@ import { Container, Grid, Paper } from "@material-ui/core";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import ArrowForwardIosIcon from "@material-ui/icons/ArrowForwardIos";
 import Slider from "@material-ui/core/Slider";
+
 const calculateInterest = (winprobability, highMargin, mildMargin) => {
   const interest = {
     noInterest: false,
@@ -40,7 +41,7 @@ const calculateInterest = (winprobability, highMargin, mildMargin) => {
 
 function SportHome() {
   const [cancelToken, setCancelToken] = useState(axios.CancelToken.source());
-  const [selectedDate, handleDateChange] = useState(new Date());
+  const [selectedDate, handleDateChange] = useState();
   const [events, setEvents] = useState({});
   const [displayScores, setDisplayScores] = useState([]);
   const [interestMargin, setInterestMargin] = useState({
@@ -50,21 +51,40 @@ function SportHome() {
   });
 
   useEffect(() => {
-    //const CancelToken = axios.CancelToken;
-    //setCancelToken(CancelToken.source());
+    const queryString = window.location.search;
+    console.log("params: ", queryString);
+    const urlParams = new URLSearchParams(queryString);
+    const dateStr = urlParams.get("date");
+    if (dateStr) {
+      console.log("got date string: ", dateStr);
+      const date = moment(dateStr, "DDMMYYYY").toDate();
+      if (!isNaN(date.getTime())) {
+        handleDateChange(date);
+      } else {
+        handleDateChange(new Date());
+      }
+    } else {
+      handleDateChange(new Date());
+    }
   }, []);
+
   useEffect(() => {
-    //this assume the selectedDate is in New Zealand Time!
-    //one day ahead of US
+    setEvents({});
+    if (!selectedDate || isNaN(selectedDate.getTime())) {
+      cancelToken.cancel("user requested events");
+      return;
+    }
+
+
     const formattedDate = moment(selectedDate)
       .subtract(1, "day")
       .format("YYYYMMDD");
-    console.log("called for date: ", formattedDate);
 
     //cancel previous requests
-    cancelToken.cancel("user requested a new set of events");
+    cancelToken.cancel("user requested events for " + formattedDate);
     const newCancelToken = axios.CancelToken.source();
     setCancelToken(newCancelToken);
+
     axios
       .get(
         `https://secure.espn.com/core/nba/scoreboard?xhr=1&render=true&device=desktop&country=nz&lang=en&region=us&site=espn&edition-host=espn.com&site-type=full&date=${formattedDate}`,
@@ -81,7 +101,6 @@ function SportHome() {
         if (!response) {
           return;
         }
-        setEvents({});
         const localEvents = {};
         response.data.content.sbData.events.forEach(
           (event) => (localEvents[event.id] = event)
@@ -92,17 +111,18 @@ function SportHome() {
         response.data.content.sbData.events.forEach((event) => {
           axios
             .get(
-              `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${event.id}`
-              ,{ cancelToken: newCancelToken.token }
-            ).catch(function (thrown) {
+              `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${event.id}`,
+              { cancelToken: newCancelToken.token }
+            )
+            .catch(function (thrown) {
               if (axios.isCancel(thrown)) {
-                console.log("Request canceled:    ->", thrown.message);
+                console.log("Request canceled inner: ", thrown.message);
               } else {
                 console.error(thrown.message);
               }
             })
             .then((res) => {
-              if(!res){
+              if (!res) {
                 return;
               }
               res.data["interest"] = calculateInterest(
@@ -118,8 +138,7 @@ function SportHome() {
                 ...prevEvents,
                 [event.id]: localEvent,
               }));
-            })
-
+            });
         });
       });
   }, [selectedDate]);
@@ -149,13 +168,8 @@ function SportHome() {
     >
       <Grid item xs={12}>
         <button
-          onClick={() => {
-            console.log(displayScores);
-          }}
-        />
-        <button
           onClick={() =>
-            handleDateChange(moment(selectedDate).subtract(1, "day"))
+            handleDateChange(moment(selectedDate).subtract(1, "day").toDate())
           }
         >
           <ArrowBackIosIcon />
@@ -176,21 +190,23 @@ function SportHome() {
           />
         </MuiPickersUtilsProvider>
         <button
-          onClick={() => handleDateChange(moment(selectedDate).add(1, "day"))}
+          onClick={() => handleDateChange(moment(selectedDate).add(1, "day").toDate())}
         >
           <ArrowForwardIosIcon />
         </button>
       </Grid>
-      <Grid item xs={12}>
-        <DisplayEvents
-          events={events}
-          date={selectedDate}
-          displayScores={displayScores}
-          setDisplayScores={setDisplayScores}
-          interestMargin={interestMargin}
-          setInterestMargin={setInterestMargin}
-        />
-      </Grid>
+      {/* {selectedDate && !isNaN(selectedDate.getTime()) && ( */}
+        <Grid item xs={12}>
+          <DisplayEvents
+            events={events}
+            date={selectedDate}
+            displayScores={displayScores}
+            setDisplayScores={setDisplayScores}
+            interestMargin={interestMargin}
+            setInterestMargin={setInterestMargin}
+          />
+        </Grid>
+      {/* )} */}
     </Grid>
   );
 }
