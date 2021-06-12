@@ -10,6 +10,29 @@ import { Container, Grid, Paper } from "@material-ui/core";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import ArrowForwardIosIcon from "@material-ui/icons/ArrowForwardIos";
 import Slider from "@material-ui/core/Slider";
+import MenuItem from '@material-ui/core/MenuItem';
+import FormHelperText from '@material-ui/core/FormHelperText';
+import FormControl from '@material-ui/core/FormControl';
+import Select from '@material-ui/core/Select';
+import InputLabel from '@material-ui/core/InputLabel';
+
+import { makeStyles } from '@material-ui/core/styles';
+
+const nba = Object.freeze({id:'nba',link:'basketball/nba', scoresID:'plays',name:"nba"})
+const nfl = Object.freeze({id:'nfl',link:'football/nfl', scoresID:'scoringPlays',name:"nfl"})
+
+const SPORTS_ENUM = Object.freeze({[nba.id]:nba, [nfl.id]:nfl})
+
+const useStyles = makeStyles((theme) => ({
+  formControl: {
+    margin: theme.spacing(1),
+    minWidth: 300,
+  },
+  selectEmpty: {
+    marginTop: theme.spacing(2),
+  },
+}));
+
 
 const calculateInterest = (winprobability, highMargin, mildMargin) => {
   const interest = {
@@ -39,7 +62,15 @@ const calculateInterest = (winprobability, highMargin, mildMargin) => {
   return interest;
 };
 
+
+const getScore = (eventData,sport)=>{
+  const playArray = eventData[sport.scoresID]
+  const recentPlay = playArray[playArray.length - 1]
+  return recentPlay
+}
+
 function SportHome() {
+  const classes = useStyles();
   const [cancelToken, setCancelToken] = useState(axios.CancelToken.source());
   const [selectedDate, handleDateChange] = useState();
   const [events, setEvents] = useState({});
@@ -49,11 +80,14 @@ function SportHome() {
     high: 0.1,
     mild: 0.2,
   });
-
+  const [age, setAge] = React.useState('');
+  const [activeSport,setActiveSport] = useState(SPORTS_ENUM.nfl)
+  const SPORT_ESPN_LINK = activeSport.link;
   useEffect(() => {
     const queryString = window.location.search;
     console.log("params: ", queryString);
     const urlParams = new URLSearchParams(queryString);
+    
     const dateStr = urlParams.get("date");
     if (dateStr) {
       console.log("got date string: ", dateStr);
@@ -66,12 +100,27 @@ function SportHome() {
     } else {
       handleDateChange(new Date());
     }
+
+    const sportStr = urlParams.get("sport");
+    if (sportStr) {
+      const sport = SPORTS_ENUM[sportStr]
+      if (sport) {
+        setActiveSport(sport);
+      } else {
+        setActiveSport(SPORTS_ENUM.nba);
+      }
+    } else {
+      setActiveSport(SPORTS_ENUM.nba);
+    }
+
   }, []);
 
   useEffect(() => {
+    console.log("here",selectedDate)
     setEvents({});
     if (!selectedDate || isNaN(selectedDate.getTime())) {
       cancelToken.cancel("user requested events");
+      console.log("returning")
       return;
     }
 
@@ -85,7 +134,7 @@ function SportHome() {
     setCancelToken(newCancelToken);
     axios
       .get(
-        `http://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${formattedDate}`,
+        `http://site.api.espn.com/apis/site/v2/sports/${SPORT_ESPN_LINK}/scoreboard?dates=${formattedDate}`,
         { cancelToken: newCancelToken.token }
       )
       .catch(function (thrown) {
@@ -105,11 +154,12 @@ function SportHome() {
         );
 
         setEvents(localEvents);
-
+         
         response.data.events.forEach((event) => {
+          console.log(`https://site.api.espn.com/apis/site/v2/sports/${SPORT_ESPN_LINK}/summary?event=${event.id}`)
           axios
             .get(
-              `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${event.id}`,
+              `https://site.api.espn.com/apis/site/v2/sports/${SPORT_ESPN_LINK}/summary?event=${event.id}`,
               { cancelToken: newCancelToken.token }
             )
             .catch(function (thrown) {
@@ -139,7 +189,7 @@ function SportHome() {
             });
         });
       });
-  }, [selectedDate]);
+  }, [selectedDate,activeSport]);
 
   useEffect(() => {
     console.log("Updated: ", events);
@@ -164,6 +214,28 @@ function SportHome() {
       alignItems="center"
       style={{ minHeight: "100vh" }}
     >
+      <Grid item xs={12}>
+      <FormControl className={classes.formControl}>
+        <InputLabel id="demo-simple-select-label">Sport</InputLabel>
+      <Select
+          labelId="demo-simple-select-label"
+          id="demo-simple-select"
+          value={activeSport.name}
+          renderValue={()=>activeSport.name}
+          onChange={(event)=>{setActiveSport(event.target.value)}}
+        >
+          {/* TODO make this dynamic */}
+          {/* {Object.keys(SPORTS_ENUM).map((v)=>{
+            console.log(v);
+            return <MenuItem value={v.id}>huh{v.name}</MenuItem>
+          })}
+           */}
+           <MenuItem value={nba}>{nba.name}</MenuItem>
+           <MenuItem value={nfl}>{nfl.name}</MenuItem>
+          
+        </Select>
+        </FormControl>
+      </Grid>
       <Grid item xs={12}>
         <button
           onClick={() =>
@@ -204,6 +276,7 @@ function SportHome() {
           setDisplayScores={setDisplayScores}
           interestMargin={interestMargin}
           setInterestMargin={setInterestMargin}
+          activeSport={activeSport}
         />
       </Grid>
       )}
@@ -218,6 +291,7 @@ const DisplayEvents = ({
   setDisplayScores,
   interestMargin,
   setInterestMargin,
+  activeSport
 }) => {
   return (
     <div>
@@ -242,6 +316,7 @@ const DisplayEvents = ({
                 event={events[key]}
                 displayScores={displayScores}
                 setDisplayScores={setDisplayScores}
+                activeSport={activeSport}
               />
             );
           })
@@ -250,7 +325,7 @@ const DisplayEvents = ({
   );
 };
 
-const DisplayEvent = ({ event, displayScores, setDisplayScores }) => {
+const DisplayEvent = ({ event, displayScores, setDisplayScores ,activeSport}) => {
   const now = new Date();
   return (
     <Paper elevation={3} style={{ padding: "10px", margin: "10px" }}>
@@ -259,19 +334,20 @@ const DisplayEvent = ({ event, displayScores, setDisplayScores }) => {
         {event.status.type.description} - {event.status.type.detail} as of{" "}
         {moment(now).format("h:mmA")}
       </p>
-      {event.status.type.name != "STATUS_SCHEDULED" && (
+      {event.status.type.name !== "STATUS_SCHEDULED" && (
         <DisplayEventScores
           id={event.id}
           data={event.data}
           displayScores={displayScores}
           setDisplayScores={setDisplayScores}
+          activeSport={activeSport}
         />
       )}
     </Paper>
   );
 };
 
-const DisplayEventScores = ({ id, data, displayScores, setDisplayScores }) => {
+const DisplayEventScores = ({ id, data, displayScores, setDisplayScores ,activeSport}) => {
   return data ? (
     <Grid>
       <Grid item xs={6}>
@@ -293,9 +369,9 @@ const DisplayEventScores = ({ id, data, displayScores, setDisplayScores }) => {
             Display Scores
           </button>
         ) : (
-          data.plays[data.plays.length - 1].awayScore +
+          getScore(data,activeSport).awayScore +
           " - " +
-          data.plays[data.plays.length - 1].homeScore
+          getScore(data,activeSport).homeScore
         )}
       </Grid>
     </Grid>
