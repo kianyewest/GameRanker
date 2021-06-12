@@ -39,6 +39,7 @@ const calculateInterest = (winprobability, highMargin, mildMargin) => {
 };
 
 function SportHome() {
+  const [cancelToken, setCancelToken] = useState(axios.CancelToken.source());
   const [selectedDate, handleDateChange] = useState(new Date());
   const [events, setEvents] = useState({});
   const [displayScores, setDisplayScores] = useState([]);
@@ -47,32 +48,63 @@ function SportHome() {
     high: 0.1,
     mild: 0.2,
   });
+
+  useEffect(() => {
+    //const CancelToken = axios.CancelToken;
+    //setCancelToken(CancelToken.source());
+  }, []);
   useEffect(() => {
     //this assume the selectedDate is in New Zealand Time!
     //one day ahead of US
     const formattedDate = moment(selectedDate)
       .subtract(1, "day")
       .format("YYYYMMDD");
-    console.log("runnin");
+    console.log("called for date: ", formattedDate);
+
+    //cancel previous requests
+    cancelToken.cancel("user requested a new set of events");
+    const newCancelToken = axios.CancelToken.source();
+    setCancelToken(newCancelToken);
     axios
       .get(
-        `https://secure.espn.com/core/nba/scoreboard?xhr=1&render=true&device=desktop&country=nz&lang=en&region=us&site=espn&edition-host=espn.com&site-type=full&date=${formattedDate}`
+        `https://secure.espn.com/core/nba/scoreboard?xhr=1&render=true&device=desktop&country=nz&lang=en&region=us&site=espn&edition-host=espn.com&site-type=full&date=${formattedDate}`,
+        { cancelToken: newCancelToken.token }
       )
+      .catch(function (thrown) {
+        if (axios.isCancel(thrown)) {
+          console.log("Request canceled:    ->", thrown.message);
+        } else {
+          console.error(thrown.message);
+        }
+      })
       .then(function (response) {
+        if (!response) {
+          return;
+        }
         setEvents({});
         const localEvents = {};
         response.data.content.sbData.events.forEach(
           (event) => (localEvents[event.id] = event)
         );
 
-        // setEvents(localEvents);
+        setEvents(localEvents);
 
         response.data.content.sbData.events.forEach((event) => {
           axios
             .get(
               `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${event.id}`
-            )
+              ,{ cancelToken: newCancelToken.token }
+            ).catch(function (thrown) {
+              if (axios.isCancel(thrown)) {
+                console.log("Request canceled:    ->", thrown.message);
+              } else {
+                console.error(thrown.message);
+              }
+            })
             .then((res) => {
+              if(!res){
+                return;
+              }
               res.data["interest"] = calculateInterest(
                 res.data.winprobability,
                 interestMargin.high,
@@ -86,11 +118,9 @@ function SportHome() {
                 ...prevEvents,
                 [event.id]: localEvent,
               }));
-            });
+            })
+
         });
-      })
-      .catch(function (error) {
-        console.error(error);
       });
   }, [selectedDate]);
 
@@ -176,7 +206,7 @@ const DisplayEvents = ({
   return (
     <div>
       {<p>Results for: {moment(date).format("DD/MM/YYYY")} (NZ time)</p>}
-      Set interest range (lower number means closer game)
+      Set interest rangeeee (lower number means closer game)
       <Slider
         defaultValue={interestMargin.defaultHigh}
         step={0.001}
@@ -207,18 +237,20 @@ const DisplayEvents = ({
 const DisplayEvent = ({ event, displayScores, setDisplayScores }) => {
   const now = new Date();
   return (
-    <Paper elevation={3} style={{ padding: "10px" ,margin:"10px"}}>
+    <Paper elevation={3} style={{ padding: "10px", margin: "10px" }}>
       <h1>{event.name}</h1>
       <p>
         {event.status.type.description} - {event.status.type.detail} as of{" "}
         {moment(now).format("h:mmA")}
       </p>
-      {event.status.type.name != "STATUS_SCHEDULED" && <DisplayEventScores
-        id={event.id}
-        data={event.data}
-        displayScores={displayScores}
-        setDisplayScores={setDisplayScores}
-      />}
+      {event.status.type.name != "STATUS_SCHEDULED" && (
+        <DisplayEventScores
+          id={event.id}
+          data={event.data}
+          displayScores={displayScores}
+          setDisplayScores={setDisplayScores}
+        />
+      )}
     </Paper>
   );
 };
@@ -245,7 +277,9 @@ const DisplayEventScores = ({ id, data, displayScores, setDisplayScores }) => {
             Display Scores
           </button>
         ) : (
-          data.plays[data.plays.length-1].awayScore +" - "+data.plays[data.plays.length-1].homeScore 
+          data.plays[data.plays.length - 1].awayScore +
+          " - " +
+          data.plays[data.plays.length - 1].homeScore
         )}
       </Grid>
     </Grid>
