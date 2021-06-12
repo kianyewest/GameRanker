@@ -116,11 +116,10 @@ function SportHome() {
   }, []);
 
   useEffect(() => {
-    console.log("here",selectedDate)
+
     setEvents({});
     if (!selectedDate || isNaN(selectedDate.getTime())) {
       cancelToken.cancel("user requested events");
-      console.log("returning")
       return;
     }
 
@@ -145,9 +144,11 @@ function SportHome() {
         }
       })
       .then(function (response) {
+        console.log("response: ",response)
         if (!response) {
           return;
         }
+        
         const localEvents = {};
         response.data.events.forEach(
           (event) => (localEvents[event.id] = event)
@@ -156,7 +157,6 @@ function SportHome() {
         setEvents(localEvents);
          
         response.data.events.forEach((event) => {
-          console.log(`https://site.api.espn.com/apis/site/v2/sports/${SPORT_ESPN_LINK}/summary?event=${event.id}`)
           axios
             .get(
               `https://site.api.espn.com/apis/site/v2/sports/${SPORT_ESPN_LINK}/summary?event=${event.id}`,
@@ -181,7 +181,6 @@ function SportHome() {
 
               const localEvent = localEvents[event.id];
               localEvent["data"] = res.data;
-              console.log("localEvent: ", localEvent);
               setEvents((prevEvents) => ({
                 ...prevEvents,
                 [event.id]: localEvent,
@@ -192,7 +191,6 @@ function SportHome() {
   }, [selectedDate,activeSport]);
 
   useEffect(() => {
-    console.log("Updated: ", events);
     Object.keys(events).forEach((key) => {
       const updatedEvent = events[key];
       if (updatedEvent.data) {
@@ -296,7 +294,7 @@ const DisplayEvents = ({
   return (
     <div>
       {<p>Results for: {moment(date).format("DD/MM/YYYY")} (NZ time)</p>}
-      Set interest rangeeee (lower number means closer game)
+      Set interest range (lower number means closer game)
       <Slider
         defaultValue={interestMargin.defaultHigh}
         step={0.001}
