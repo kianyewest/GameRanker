@@ -14,10 +14,17 @@ import MenuItem from "@material-ui/core/MenuItem";
 import FormControl from "@material-ui/core/FormControl";
 import Select from "@material-ui/core/Select";
 import InputLabel from "@material-ui/core/InputLabel";
-
+import IconButton from "@material-ui/core/IconButton";
 import { makeStyles } from "@material-ui/core/styles";
-import {calculateInterest,getScore,getEvents,getDateFromParam,getSportFromParam} from "./Functions"
-import {SPORTS_ENUM} from "./Sports"
+import Typography from "@material-ui/core/Typography";
+import {
+  calculateInterest,
+  getScore,
+  getEvents,
+  getDateFromParam,
+  getSportFromParam,
+} from "./Functions";
+import { SPORTS_ENUM } from "./Sports";
 
 const useStyles = makeStyles((theme) => ({
   formControl: {
@@ -27,14 +34,12 @@ const useStyles = makeStyles((theme) => ({
   selectEmpty: {
     marginTop: theme.spacing(2),
   },
-  header:{
-    padding:"10px",
+  header: {
+    padding: "10px",
     // backgroundColor:"lightblue",
-    minHeight:"100vh"
-  }
+    minHeight: "100vh",
+  },
 }));
-
-
 
 function SportHome() {
   const classes = useStyles();
@@ -55,10 +60,8 @@ function SportHome() {
     console.log("params: ", queryString);
     const urlParams = new URLSearchParams(queryString);
 
-    getDateFromParam(urlParams,handleDateChange)
-    getSportFromParam(urlParams,setActiveSport)
-
-    
+    getDateFromParam(urlParams, handleDateChange);
+    getSportFromParam(urlParams, setActiveSport);
   }, []);
 
   useEffect(() => {
@@ -78,8 +81,15 @@ function SportHome() {
     cancelToken.cancel("user requested events for " + formattedDate);
     const newCancelToken = axios.CancelToken.source();
     setCancelToken(newCancelToken);
-    
-    getEvents(formattedDate,SPORT_ESPN_LINK,newCancelToken,interestMargin,setLoadingEvents,setEvents)
+
+    getEvents(
+      formattedDate,
+      SPORT_ESPN_LINK,
+      newCancelToken,
+      interestMargin,
+      setLoadingEvents,
+      setEvents
+    );
   }, [selectedDate, activeSport]);
 
   useEffect(() => {
@@ -105,91 +115,99 @@ function SportHome() {
       alignItems="flex-start"
       className={classes.header}
     >
-      <Grid container  direction="row">
-      <Grid item xs={12} lg={4}>
-        <FormControl className={classes.formControl}>
-          <InputLabel id="demo-simple-select-label">Sport</InputLabel>
-          <Select
-            labelId="demo-simple-select-label"
-            id="demo-simple-select"
-            value={activeSport.name}
-            renderValue={() => activeSport.name}
-            onChange={(event) => {
-              console.log(event.target.value);
-              // setActiveSport(event.target.value);
-              setActiveSport(SPORTS_ENUM[event.target.value]);
-            }}
-          >
-            {/* TODO make this dynamic */}
-            {/* {Object.keys(SPORTS_ENUM).map((v)=>{
+      <Grid
+        container
+        direction="row"
+        justify="flex-start"
+        alignItems="flex-end"
+      >
+        <Grid item xs={12} lg={4}>
+          <FormControl className={classes.formControl}>
+            <InputLabel id="demo-simple-select-label">Sport</InputLabel>
+            <Select
+              labelId="demo-simple-select-label"
+              id="demo-simple-select"
+              value={activeSport.name}
+              renderValue={() => activeSport.name}
+              onChange={(event) => {
+                console.log(event.target.value);
+                // setActiveSport(event.target.value);
+                setActiveSport(SPORTS_ENUM[event.target.value]);
+              }}
+            >
+              {/* TODO make this dynamic */}
+              {/* {Object.keys(SPORTS_ENUM).map((v)=>{
             console.log(v);PORTS_ENUM.nba
             return <MenuItem value={v.id}>huh{v.name}</MenuItem>
           })}
            */}
-            <MenuItem value={SPORTS_ENUM.nba.id}>{SPORTS_ENUM.nba.id}</MenuItem>
-            <MenuItem value={SPORTS_ENUM.nfl.id}>{SPORTS_ENUM.nfl.id}</MenuItem>
-          </Select>
-        </FormControl>
-      </Grid>
-      <Grid item xs={12} lg={4} >
-        <button
-          onClick={() =>
-            handleDateChange(moment(selectedDate).subtract(1, "day").toDate())
-          }
-        >
-          <ArrowBackIosIcon />
-        </button>
-        <MuiPickersUtilsProvider utils={DateFnsUtils}>
-          <KeyboardDatePicker
-            disableToolbar
-            variant="inline"
-            format="dd/MM/yyyy"
-            margin="normal"
-            id="date-picker-inline"
-            label="Date picker inline"
-            value={selectedDate}
-            onChange={handleDateChange}
-            KeyboardButtonProps={{
-              "aria-label": "change date",
-            }}
+              <MenuItem value={SPORTS_ENUM.nba.id}>
+                {SPORTS_ENUM.nba.id}
+              </MenuItem>
+              <MenuItem value={SPORTS_ENUM.nfl.id}>
+                {SPORTS_ENUM.nfl.id}
+              </MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid container item xs={12} lg={4} alignItems="flex-end">
+          <IconButton
+            aria-label="delete"
+            onClick={() =>
+              handleDateChange(moment(selectedDate).subtract(1, "day").toDate())
+            }
+          >
+            <ArrowBackIosIcon />
+          </IconButton>
+          <MuiPickersUtilsProvider utils={DateFnsUtils}>
+            <KeyboardDatePicker
+              disableToolbar
+              variant="inline"
+              format="dd/MM/yyyy"
+              margin="normal"
+              id="date-picker-inline"
+              label="Date picker inline"
+              value={selectedDate}
+              onChange={handleDateChange}
+              KeyboardButtonProps={{
+                "aria-label": "change date",
+              }}
+            />
+          </MuiPickersUtilsProvider>
+
+          <IconButton
+            aria-label="delete"
+            onClick={() =>
+              handleDateChange(moment(selectedDate).add(1, "day").toDate())
+            }
+          >
+            <ArrowForwardIosIcon />
+          </IconButton>
+        </Grid>
+        <Grid item xs={12} lg={4}>
+          <DisplayInterestSlider
+            interestMargin={interestMargin}
+            setInterestMargin={setInterestMargin}
           />
-        </MuiPickersUtilsProvider>
-        <button
-          onClick={() =>
-            handleDateChange(moment(selectedDate).add(1, "day").toDate())
-          }
-        >
-          <ArrowForwardIosIcon />
-        </button>
+        </Grid>
       </Grid>
-      <Grid item xs={12} lg={4}>
-        <DisplayInterestSlider
-          interestMargin={interestMargin}
-          setInterestMargin={setInterestMargin}
-        />
-      </Grid>
-      </Grid>
-      
+
       {loadingEvents ? (
         "Loading.."
       ) : (
         <Grid container item xs={12}>
           {selectedDate && !isNaN(selectedDate.getTime()) && (
-            
-              
-                <h2>
-                  Results for: {moment(selectedDate).format("DD/MM/YYYY")} (NZ
-                  time)
-                </h2>
+            <h2>
+              Results for: {moment(selectedDate).format("DD/MM/YYYY")} (NZ time)
+            </h2>
           )}
-          
-            <DisplayEvents
-              events={events}
-              displayScores={displayScores}
-              setDisplayScores={setDisplayScores}
-              activeSport={activeSport}
-            />
-          
+
+          <DisplayEvents
+            events={events}
+            displayScores={displayScores}
+            setDisplayScores={setDisplayScores}
+            activeSport={activeSport}
+          />
         </Grid>
       )}
     </Grid>
@@ -198,8 +216,10 @@ function SportHome() {
 
 const DisplayInterestSlider = ({ date, interestMargin, setInterestMargin }) => {
   return (
-    <div>
-      Set interest range (lower number means closer game)
+    <div style={{ paddingRight: "50px" }}>
+      <Typography id="continuous-slider" gutterBottom>
+        Volume
+      </Typography>{" "}
       <Slider
         defaultValue={interestMargin.defaultHigh}
         step={0.001}
@@ -229,7 +249,6 @@ const DisplayEvents = ({
             return (
               <Grid item xs={12} lg={4} key={events[key].id}>
                 <DisplayEvent
-                  
                   event={events[key]}
                   displayScores={displayScores}
                   setDisplayScores={setDisplayScores}
