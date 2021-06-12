@@ -75,7 +75,6 @@ function SportHome() {
       return;
     }
 
-
     const formattedDate = moment(selectedDate)
       .subtract(1, "day")
       .format("YYYYMMDD");
@@ -84,10 +83,9 @@ function SportHome() {
     cancelToken.cancel("user requested events for " + formattedDate);
     const newCancelToken = axios.CancelToken.source();
     setCancelToken(newCancelToken);
-
     axios
       .get(
-        `https://secure.espn.com/core/nba/scoreboard?xhr=1&render=true&device=desktop&country=nz&lang=en&region=us&site=espn&edition-host=espn.com&site-type=full&date=${formattedDate}`,
+        `http://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${formattedDate}`,
         { cancelToken: newCancelToken.token }
       )
       .catch(function (thrown) {
@@ -102,13 +100,13 @@ function SportHome() {
           return;
         }
         const localEvents = {};
-        response.data.content.sbData.events.forEach(
+        response.data.events.forEach(
           (event) => (localEvents[event.id] = event)
         );
 
         setEvents(localEvents);
 
-        response.data.content.sbData.events.forEach((event) => {
+        response.data.events.forEach((event) => {
           axios
             .get(
               `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${event.id}`,
@@ -190,23 +188,25 @@ function SportHome() {
           />
         </MuiPickersUtilsProvider>
         <button
-          onClick={() => handleDateChange(moment(selectedDate).add(1, "day").toDate())}
+          onClick={() =>
+            handleDateChange(moment(selectedDate).add(1, "day").toDate())
+          }
         >
           <ArrowForwardIosIcon />
         </button>
       </Grid>
-      {/* {selectedDate && !isNaN(selectedDate.getTime()) && ( */}
-        <Grid item xs={12}>
-          <DisplayEvents
-            events={events}
-            date={selectedDate}
-            displayScores={displayScores}
-            setDisplayScores={setDisplayScores}
-            interestMargin={interestMargin}
-            setInterestMargin={setInterestMargin}
-          />
-        </Grid>
-      {/* )} */}
+      {selectedDate && !isNaN(selectedDate.getTime()) && (
+      <Grid item xs={12}>
+        <DisplayEvents
+          events={events}
+          date={selectedDate}
+          displayScores={displayScores}
+          setDisplayScores={setDisplayScores}
+          interestMargin={interestMargin}
+          setInterestMargin={setInterestMargin}
+        />
+      </Grid>
+      )}
     </Grid>
   );
 }
