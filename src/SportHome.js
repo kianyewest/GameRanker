@@ -6,7 +6,7 @@ import {
   MuiPickersUtilsProvider,
 } from "@material-ui/pickers";
 import moment from "moment";
-import { Container, Grid, Paper } from "@material-ui/core";
+import { Grid, Paper } from "@material-ui/core";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import ArrowForwardIosIcon from "@material-ui/icons/ArrowForwardIos";
 import Slider from "@material-ui/core/Slider";
@@ -105,8 +105,8 @@ function SportHome() {
       alignItems="flex-start"
       className={classes.header}
     >
-      <Grid container xs={12}  direction="row">
-      <Grid item xs={4}>
+      <Grid container  direction="row">
+      <Grid item xs={12} lg={4}>
         <FormControl className={classes.formControl}>
           <InputLabel id="demo-simple-select-label">Sport</InputLabel>
           <Select
@@ -115,21 +115,23 @@ function SportHome() {
             value={activeSport.name}
             renderValue={() => activeSport.name}
             onChange={(event) => {
-              setActiveSport(event.target.value);
+              console.log(event.target.value);
+              // setActiveSport(event.target.value);
+              setActiveSport(SPORTS_ENUM[event.target.value]);
             }}
           >
             {/* TODO make this dynamic */}
             {/* {Object.keys(SPORTS_ENUM).map((v)=>{
-            console.log(v);
+            console.log(v);PORTS_ENUM.nba
             return <MenuItem value={v.id}>huh{v.name}</MenuItem>
           })}
            */}
-            <MenuItem value={SPORTS_ENUM.nba}>{SPORTS_ENUM.nba.name}</MenuItem>
-            <MenuItem value={SPORTS_ENUM.nfl}>{SPORTS_ENUM.nfl.name}</MenuItem>
+            <MenuItem value={SPORTS_ENUM.nba.id}>{SPORTS_ENUM.nba.id}</MenuItem>
+            <MenuItem value={SPORTS_ENUM.nfl.id}>{SPORTS_ENUM.nfl.id}</MenuItem>
           </Select>
         </FormControl>
       </Grid>
-      <Grid item xs={4}>
+      <Grid item xs={12} lg={4} >
         <button
           onClick={() =>
             handleDateChange(moment(selectedDate).subtract(1, "day").toDate())
@@ -160,7 +162,7 @@ function SportHome() {
           <ArrowForwardIosIcon />
         </button>
       </Grid>
-      <Grid item xs={4}>
+      <Grid item xs={12} lg={4}>
         <DisplayInterestSlider
           interestMargin={interestMargin}
           setInterestMargin={setInterestMargin}
@@ -225,9 +227,9 @@ const DisplayEvents = ({
       {Object.keys(events).length > 0
         ? Object.keys(events).map((key) => {
             return (
-              <Grid item xs={4}>
+              <Grid item xs={12} lg={4} key={events[key].id}>
                 <DisplayEvent
-                  key={events[key].id}
+                  
                   event={events[key]}
                   displayScores={displayScores}
                   setDisplayScores={setDisplayScores}
