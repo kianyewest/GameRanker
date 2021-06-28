@@ -315,7 +315,12 @@ const DisplayEventScores = ({
   displayAllScores,
 }) => {
   const [displayGraph, setDisplayGraph] = useState(false);
-
+  const randomiseGraph = Math.random() < 0.5;
+  const graphData = data && data.winprobability.map((item) => {
+    return { team: randomiseGraph ? 1-item.homeWinPercentage:item.homeWinPercentage, zero: 0.5 };
+  })
+  console.log(graphData)
+  console.log(data && data.winprobability)
   return data ? (
     <Grid>
       <Grid item xs={6}>
@@ -354,9 +359,7 @@ const DisplayEventScores = ({
           style={{ overflow: "none" }}
           width={400}
           height={400}
-          data={data.winprobability.map((item) => {
-            return { team: item.homeWinPercentage, zero: 0.5 };
-          })}
+          data={graphData}
         >
           <Line type="monotone" dataKey="team" stroke="#8884d8" />
           <Line type="monotone" dataKey="zero" stroke="#8884d8" />
